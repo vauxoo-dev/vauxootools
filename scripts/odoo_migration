@@ -126,7 +126,7 @@ class ImportCurrency(object):
                                     search(model,
                                            [])
         fields = ['id', 'name', 'rate', 'rounding', 'symbol', 'accuracy',
-                  'position', 'base']
+                  'base']
         for currency in self.migration.origin.execute(model,
                                                       'export_data',
                                                       currency_ids,
@@ -307,7 +307,6 @@ class ImportProductV6(object):
                   'property_account_income_categ/id',
                   'property_stock_account_input_categ/id',
                   'property_stock_account_output_categ/id',
-                  'property_stock_valuation_account_id/id',
                   'property_stock_journal/id']
         category_ids = self.migration.origin.search(model, [])
         no_create = {}
@@ -599,7 +598,6 @@ class ImportPaymentTerm(object):
                                                      fields)['datas']:
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [account])
-            print result
             if result[2]:
                 self.migration.loger.error('Error creating the Term Line %s '
                                            'because %s' % (account[1],
@@ -633,8 +631,7 @@ def importusers(migration):
                                               [users],
                                               fields)['datas']
 
-
-        result = migration.dest.execute(model, 'import_data', fields or \
+        result = migration.dest.execute(model, 'import_data', fields or
                                         fields, users_list)
         if result[2]:
             migration.loger.error('Error creating the user %s '
@@ -739,9 +736,15 @@ class ImportAccountsV6(object):
         model = 'account.account.type'
         fields = ['id', 'name', 'code', 'report_type', 'close_method']
         account_ids = self.migration.origin.search(model, [])
+        r_type = {'Balance Sheet (Assets Accounts)': 'asset',
+                  'Profit & Loss (Expense Accounts)': 'expense',
+                  'Profit & Loss (Income Accounts)': 'income'}
         for account in self.migration.origin.execute(model, 'export_data',
                                                      account_ids,
                                                      fields)['datas']:
+            if account[3] in r_type:
+                account.insert(3, r_type.get(account[3]))
+                account.pop(4)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [account])
             if result[2]:
@@ -847,7 +850,6 @@ class MigrationTools(object):
         return True
 
 
-
 if __name__ == '__main__':
 
     CONFIGURATION = VauxooToolsServers(app_name='migrate_instances',
@@ -860,19 +862,19 @@ if __name__ == '__main__':
 
     CI = MigrationTools()
     CI.main(CONFIGURATION)
-  #  OBJ = ImportCurrency(CI)
-  #  OBJ.main()
-  #  OBJ = ImportAccountsV6(CI)
-  #  OBJ.main()
-  #  OBJ = ImportJournalsV6(CI)
-  #  OBJ.main()
-  #  OBJ = ImportFiscalYearsPeriods(CI)
-  #  OBJ.main()
-  #  OBJ = ImportProductV6(CI)
-  #  OBJ.main()
-  #  OBJ = ImportListPriceV6(CI)
-  #  OBJ.main()
-    importpartnersv6(CI)
-    #importusers(CI)
-    OBJ = ImportPaymentTerm(CI)
+    OBJ = ImportCurrency(CI)
     OBJ.main()
+    OBJ = ImportAccountsV6(CI)
+    OBJ.main()
+    OBJ = ImportJournalsV6(CI)
+    OBJ.main()
+    # OBJ = ImportFiscalYearsPeriods(CI)
+    # OBJ.main()
+    # OBJ = ImportProductV6(CI)
+    # OBJ.main()
+    # OBJ = ImportListPriceV6(CI)
+    # OBJ.main()
+    # importpartnersv6(CI)
+    # importusers(CI)
+    # OBJ = ImportPaymentTerm(CI)
+    # OBJ.main()
