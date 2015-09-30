@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 """
-Script with a serie of methods and classes to migrate date from differents
+Script with a serie of methods and classes to migrate date from different
 versions of Odoo
 """
 from vauxootools.vauxootools import VauxooToolsServers
@@ -26,13 +26,18 @@ class ImportJournalEntries(object):
         Create Reconciles
         '''
         model = 'account.move.reconcile'
-        fields = ['id', 'name', 'create_date', 'type']
+        fields = ['id', 'name', 'create_date', 'type', '.id']
         move_ids = self.migration.origin.search(model, [], limit=1)
         for i in move_ids:
             for move in self.migration.origin.execute(model, 'export_data',
                                                       [i], fields)['datas']:
                 move.insert(2, move[2].split(' ')[0])
                 move.pop(3)
+                if not move[0]:
+                    new_id = '__export__.{movel},{ids}'.format(movel=model.replace('.', '_'), ids=move[-1])
+                    move.pop(0)
+                    move.insert(0, new_id)
+                move.pop(-1)
                 result = self.migration.dest.execute(model, 'import_data',
                                                      fields, [move])
                 if result[2]:
@@ -43,18 +48,25 @@ class ImportJournalEntries(object):
                     self.migration.loger.info('Created the Reconcile  %s '
                                               '' % (move[1]))
         return True
+
     def create_account_move(self, period):
         '''
         Create Journal Entries
         '''
         model = 'account.move'
         fields = ['id', 'name', 'journal_id/id', 'ref', 'period_id/id', 'date',
-                  'to_check', 'partner_id/id', 'balance', 'narration', 'state']
+                  'to_check', 'partner_id/id', 'balance', 'narration', 'state',
+                  '.id']
         move_ids = self.migration.origin.search(model,
                                                 [('period_id', '=', period)])
         for i in move_ids:
             for move in self.migration.origin.execute(model, 'export_data',
                                                       [i], fields)['datas']:
+                if not move[0]:
+                    new_id = '__export__.{movel},{ids}'.format(movel=model.replace('.', '_'), ids=move[-1])
+                    move.pop(0)
+                    move.insert(0, new_id)
+                move.pop(-1)
                 result = self.migration.dest.execute(model, 'import_data',
                                                      fields, [move])
                 if result[2]:
@@ -76,7 +88,7 @@ class ImportJournalEntries(object):
                   'account_id/id', 'amount_currency', 'amount_residual',
                   'amount_residual_currency', 'currency_id/id', 'credit',
                   'debit', 'move_id/id', 'reconcile_id/id',
-                  'reconcile_partial_id/id', 'state']
+                  'reconcile_partial_id/id', 'state', '.id']
         line_ids = self.migration.origin.search(model,
                                                 [('period_id', '=', period)])
         for i in line_ids:
@@ -85,6 +97,11 @@ class ImportJournalEntries(object):
                 if 'Valid' in line:
                     line.insert(line.index('Valid'), 'Balanced')
                     line.remove('Valid')
+                if not line[0]:
+                    new_id = '__export__.{linel},{ids}'.format(linel=model.replace('.', '_'), ids=line[-1])
+                    line.pop(0)
+                    line.insert(0, new_id)
+                line.pop(-1)
                 result = self.migration.dest.execute(model, 'import_data',
                                                      fields, [line])
                 if result[2]:
@@ -123,14 +140,18 @@ class ImportCurrency(object):
         '''
         model = 'res.currency'
         currency_ids = self.migration.origin.\
-                                    search(model,
-                                           [])
+            search(model, [])
         fields = ['id', 'name', 'rate', 'rounding', 'symbol', 'accuracy',
-                  'base']
+                  'base', '.id']
         for currency in self.migration.origin.execute(model,
                                                       'export_data',
                                                       currency_ids,
                                                       fields)['datas']:
+            if not currency[0]:
+                new_id = '__export__.{currencyl},{ids}'.format(currencyl=model.replace('.', '_'), ids=currency[-1])
+                currency.pop(0)
+                currency.insert(0, new_id)
+            currency.pop(-1)
             result = self.migration.dest.execute(model,
                                                  'import_data',
                                                  fields,
@@ -151,13 +172,18 @@ class ImportCurrency(object):
         '''
         model = 'res.currency.rate'
         currency_ids = self.migration.origin.search(model, [])
-        fields = ['id', 'name', 'currency_id/id', 'rate']
+        fields = ['id', 'name', 'currency_id/id', 'rate', '.id']
         for currency in self.migration.origin.execute(model, 'export_data',
                                                       currency_ids,
                                                       fields)['datas']:
             name = time.strftime(currency[1] + ' %H:%M:%S')
             currency.pop(1)
             currency.insert(1, name)
+            if not currency[0]:
+                new_id = '__export__.{currencyl},{ids}'.format(currencyl=model.replace('.', '_'), ids=currency[-1])
+                currency.pop(0)
+                currency.insert(0, new_id)
+            currency.pop(-1)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [currency])
             if result[2]:
@@ -192,16 +218,21 @@ class ImportJournalsV6(object):
         '''
         Create the sequence in the destiny instance for the new journal
         '''
+        model = 'ir.sequence'
         sequence_ids = self.migration.origin.\
-                                    search('ir.sequence',
-                                           [])
+            search(model, [])
         fields = ['id', 'name', 'prefix', 'suffix', 'padding',
-                  'number_increment']
+                  'number_increment', '.id']
         for sequence in self.migration.origin.execute('ir.sequence',
                                                       'export_data',
                                                       sequence_ids,
                                                       fields)['datas']:
-            result = self.migration.dest.execute('ir.sequence',
+            if not sequence[0]:
+                new_id = '__export__.{sequencel},{ids}'.format(sequencel=model.replace('.', '_'), ids=sequence[-1])
+                sequence.pop(0)
+                sequence.insert(0, new_id)
+            sequence.pop(-1)
+            result = self.migration.dest.execute(model,
                                                  'import_data',
                                                  fields,
                                                  [sequence])
@@ -219,12 +250,17 @@ class ImportJournalsV6(object):
         '''
         Import the Analytic Journal by import_data method way
         '''
-        fields = ['id', 'name', 'code', 'type']
+        fields = ['id', 'name', 'code', 'type', '.id']
         model = 'account.analytic.journal'
         analytic_ids = self.migration.origin.search(model, [])
         for analytic in self.migration.origin.execute(model, 'export_data',
                                                       analytic_ids,
                                                       fields)['datas']:
+            if not analytic[0]:
+                new_id = '__export__.{analyticl},{ids}'.format(analyticl=model.replace('.', '_'), ids=analytic[-1])
+                analytic.pop(0)
+                analytic.insert(0, new_id)
+            analytic.pop(-1)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [analytic])
             if result[2]:
@@ -244,7 +280,7 @@ class ImportJournalsV6(object):
         model = 'account.journal'
         fields = ['id', 'name', 'code', 'type', 'analytic_journal_id/id',
                   'sequence_id', 'default_credit_account_id/id',
-                  'default_debit_account_id/id']
+                  'default_debit_account_id/id', '.id']
         journal_ids = self.migration.origin.search(model, [])
         no_create = {}
         for journal in self.migration.origin.execute(model, 'export_data',
@@ -255,6 +291,11 @@ class ImportJournalsV6(object):
                                'Bank and Checks')
                 journal.remove('Bank and Cheques')
 
+            if not journal[0]:
+                new_id = '__export__.{journall},{ids}'.format(journall=model.replace('.', '_'), ids=journal[-1])
+                journal.pop(0)
+                journal.insert(0, new_id)
+            journal.pop(-1)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [journal])
             if journal[0] in no_create.keys():
@@ -307,12 +348,17 @@ class ImportProductV6(object):
                   'property_account_income_categ/id',
                   'property_stock_account_input_categ/id',
                   'property_stock_account_output_categ/id',
-                  'property_stock_journal/id']
+                  'property_stock_journal/id', '.id']
         category_ids = self.migration.origin.search(model, [])
         no_create = {}
         for category in self.migration.origin.execute(model, 'export_data',
                                                       category_ids, fields
                                                      )['datas']:
+            if not category[0]:
+                new_id = '__export__.{categoryl},{ids}'.format(categoryl=model.replace('.', '_'), ids=category[-1])
+                category.pop(0)
+                category.insert(0, new_id)
+            category.pop(-1)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [category])
             if category[0] in no_create:
@@ -343,13 +389,18 @@ class ImportProductV6(object):
         model = 'product.product'
         fields = ['id', 'name', 'type', 'default_code', 'list_price',
                   'standard_price', 'active', 'warranty', 'description_sale',
-                  'categ_id/id']
+                  'categ_id/id', '.id']
         product_ids = self.migration.origin.search(model, [], limit=1)
         no_create = {}
         for product in self.migration.origin.execute('product.product',
                                                      'export_data',
                                                      product_ids,
                                                      fields)['datas']:
+            if not product[0]:
+                new_id = '__export__.{productl},{ids}'.format(productl=model.replace('.', '_'), ids=product[-1])
+                product.pop(0)
+                product.insert(0, new_id)
+            product.pop(-1)
             result = self.migration.dest.execute(model, 'import_data',
                                                  fields, [product])
             if product[0] in no_create.keys():
@@ -396,12 +447,17 @@ class ImportListPriceV6(object):
         Import the price_list by import_data method way
         '''
         model = 'product.pricelist'
-        fields = ['id', 'name', 'type']
+        fields = ['id', 'name', 'type', '.id']
         pricelist_ids = self.migration.origin.search(model, [])
         for pricelist in self.migration.origin.execute(model,
                                                        'export_data',
                                                        pricelist_ids, fields
                                                       )['datas']:
+            if not pricelist[0]:
+                new_id = '__export__.{pricelistl},{ids}'.format(pricelistl=model.replace('.', '_'), ids=pricelist[-1])
+                pricelist.pop(0)
+                pricelist.insert(0, new_id)
+            pricelist.pop(-1)
             result = self.migration.dest.execute(model,
                                                  'import_data',
                                                  fields,
@@ -420,11 +476,16 @@ class ImportListPriceV6(object):
         Import the price_list_version by import_data method way
         '''
         model = 'product.pricelist.version'
-        fields = ['id', 'name', 'pricelist_id/id', 'date_start', 'date_end']
+        fields = ['id', 'name', 'pricelist_id/id', 'date_start', 'date_end', '.id']
         pricelist_ids = self.migration.origin.search(model, [])
         for pricelist in self.migration.origin.execute(model, 'export_data',
                                                        pricelist_ids, fields
                                                       )['datas']:
+            if not pricelist[0]:
+                new_id = '__export__.{pricelistl},{ids}'.format(pricelistl=model.replace('.', '_'), ids=pricelist[-1])
+                pricelist.pop(0)
+                pricelist.insert(0, new_id)
+            pricelist.pop(-1)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [pricelist])
             if result[2]:
@@ -444,11 +505,16 @@ class ImportListPriceV6(object):
         fields = ['id', 'name', 'price_version_id/id', 'base_pricelist_id/id',
                   'min_quantity', 'base', 'price_discount', 'product_id/id',
                   'price_max_margin', 'price_min_margin', 'price_round',
-                  'sequence', 'categ_id/id']
+                  'sequence', 'categ_id/id', '.id']
         pricelist_ids = self.migration.origin.search(model, [])
         for pricelist in self.migration.origin.execute(model, 'export_data',
                                                        pricelist_ids, fields
                                                       )['datas']:
+            if not pricelist[0]:
+                new_id = '__export__.{pricelistl},{ids}'.format(pricelistl=model.replace('.', '_'), ids=pricelist[-1])
+                pricelist.pop(0)
+                pricelist.insert(0, new_id)
+            pricelist.pop(-1)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [pricelist])
             if result[2]:
@@ -484,11 +550,16 @@ class ImportFiscalYearsPeriods(object):
         Import Fiscal Year
         '''
         model = 'account.journal.period'
-        fields = ['id', 'name', 'active', 'journal_id/id', 'period_id/id']
+        fields = ['id', 'name', 'active', 'journal_id/id', 'period_id/id', '.id']
         account_ids = self.migration.origin.search(model, [])
         for account in self.migration.origin.execute(model, 'export_data',
                                                      account_ids,
                                                      fields)['datas']:
+            if not account[0]:
+                new_id = '__export__.{accountl},{ids}'.format(accountl=model.replace('.', '_'), ids=account[-1])
+                account.pop(0)
+                account.insert(0, new_id)
+            account.pop(-1)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [account])
             if result[2]:
@@ -505,11 +576,16 @@ class ImportFiscalYearsPeriods(object):
         Import Fiscal Year
         '''
         model = 'account.fiscalyear'
-        fields = ['id', 'name', 'code', 'date_start', 'date_stop']
+        fields = ['id', 'name', 'code', 'date_start', 'date_stop', '.id']
         account_ids = self.migration.origin.search(model, [])
         for account in self.migration.origin.execute(model, 'export_data',
                                                      account_ids,
                                                      fields)['datas']:
+            if not account[0]:
+                new_id = '__export__.{accountl},{ids}'.format(accountl=model.replace('.', '_'), ids=account[-1])
+                account.pop(0)
+                account.insert(0, new_id)
+            account.pop(-1)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [account])
             if result[2]:
@@ -527,11 +603,16 @@ class ImportFiscalYearsPeriods(object):
         '''
         model = 'account.period'
         fields = ['id', 'name', 'code', 'date_start', 'date_stop',
-                  'special', 'fiscalyear_id/id']
+                  'special', 'fiscalyear_id/id', '.id']
         period_ids = self.migration.origin.search(model, [])
         for period in self.migration.origin.execute(model, 'export_data',
                                                     period_ids,
                                                     fields)['datas']:
+            if not period[0]:
+                new_id = '__export__.{periodl},{ids}'.format(periodl=model.replace('.', '_'), ids=period[-1])
+                period.pop(0)
+                period.insert(0, new_id)
+            period.pop(-1)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [period])
             if result[2]:
@@ -569,11 +650,16 @@ class ImportPaymentTerm(object):
         Import Payment Terms
         '''
         model = 'account.payment.term'
-        fields = ['id', 'name', 'note']
+        fields = ['id', 'name', 'note', '.id']
         account_ids = self.migration.origin.search(model, [])
         for account in self.migration.origin.execute(model, 'export_data',
                                                      account_ids,
                                                      fields)['datas']:
+            if not account[0]:
+                new_id = '__export__.{accountl},{ids}'.format(accountl=model.replace('.', '_'), ids=account[-1])
+                account.pop(0)
+                account.insert(0, new_id)
+            account.pop(-1)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [account])
             if result[2]:
@@ -591,11 +677,16 @@ class ImportPaymentTerm(object):
         '''
         model = 'account.payment.term.line'
         fields = ['id', 'days', 'days2', 'payment_id/id', 'value_amount',
-                  'value']
+                  'value', '.id']
         account_ids = self.migration.origin.search(model, [])
         for account in self.migration.origin.execute(model, 'export_data',
                                                      account_ids,
                                                      fields)['datas']:
+            if not account[0]:
+                new_id = '__export__.{accountl},{ids}'.format(accountl=model.replace('.', '_'), ids=account[-1])
+                account.pop(0)
+                account.insert(0, new_id)
+            account.pop(-1)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [account])
             if result[2]:
@@ -623,13 +714,19 @@ def importusers(migration):
     '''
 
     model = 'res.users'
-    fields = ['id', 'name', 'login', 'password']
+    fields = ['id', 'name', 'login', 'password', '.id']
 
     for users in migration.origin.search(model, []):
 
         users_list = migration.origin.execute(model, 'export_data',
                                               [users],
                                               fields)['datas']
+        for ulist in users_list:
+            if not ulist[0]:
+                new_id = '__export__.{ulistl},{ids}'.format(ulistl=model.replace('.', '_'), ids=ulist[-1])
+                ulist.pop(0)
+                ulist.insert(0, new_id)
+            ulist.pop(-1)
 
         result = migration.dest.execute(model, 'import_data', fields or
                                         fields, users_list)
@@ -655,7 +752,7 @@ def importpartnersv6(migration):
                 'property_payment_term/id',
                 'property_product_pricelist/id',
                 'property_product_pricelist_purchase/id', 'customer',
-                'supplier']
+                'supplier', '.id']
     fields_a = ['city', 'type', 'street', 'street2', 'fax',
                 'zip', 'country_id']
     fields_c = ['id', 'name', 'fax', 'mobile', 'street', 'street2',
@@ -690,6 +787,11 @@ def importpartnersv6(migration):
                 fields = fields_p+fields_a
 
 
+        if not partner_list[0]:
+            new_id = '__export__.{partner_listl},{ids}'.format(partner_listl=model.replace('.', '_'), ids=partner_list[-1])
+            partner_list.pop(0)
+            partner_list.insert(0, new_id)
+        partner_list.pop(-1)
         result = migration.dest.execute(model, 'import_data', fields or \
                                         fields_p, [partner_list])
         if result[2]:
@@ -734,7 +836,7 @@ class ImportAccountsV6(object):
         Import the account type by import_data method way
         '''
         model = 'account.account.type'
-        fields = ['id', 'name', 'code', 'report_type', 'close_method']
+        fields = ['id', 'name', 'code', 'report_type', 'close_method', '.id']
         account_ids = self.migration.origin.search(model, [])
         r_type = {'Balance Sheet (Assets Accounts)': 'asset',
                   'Profit & Loss (Expense Accounts)': 'expense',
@@ -745,6 +847,11 @@ class ImportAccountsV6(object):
             if account[3] in r_type:
                 account.insert(3, r_type.get(account[3]))
                 account.pop(4)
+            if not account[0]:
+                new_id = '__export__.{accountl},{ids}'.format(accountl=model.replace('.', '_'), ids=account[-1])
+                account.pop(0)
+                account.insert(0, new_id)
+            account.pop(-1)
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [account])
             if result[2]:
@@ -765,7 +872,7 @@ class ImportAccountsV6(object):
         company_dest = self.migration.dest.search('res.company',
                                                   [])
         model = 'account.account'
-        fields = ['id', 'name', 'code', 'parent_id/id', 'user_type/id']
+        fields = ['id', 'name', 'code', 'parent_id/id', 'user_type/id', '.id']
         if company_id and company_dest:
             self.import_account_type()
             company_dest = self.migration.dest.browse('res.company',
@@ -777,6 +884,11 @@ class ImportAccountsV6(object):
                                                          account_ids,
                                                          fields)['datas']:
 
+                if not account[0]:
+                    new_id = '__export__.{accountl},{ids}'.format(accountl=model.replace('.', '_'), ids=account[-1])
+                    account.pop(0)
+                    account.insert(0, new_id)
+                account.pop(-1)
                 result = self.migration.dest.execute(model, 'import_data',
                                                      fields, [account])
                 if account[0] in no_create.keys():
@@ -868,13 +980,13 @@ if __name__ == '__main__':
     OBJ.main()
     OBJ = ImportJournalsV6(CI)
     OBJ.main()
-    # OBJ = ImportFiscalYearsPeriods(CI)
-    # OBJ.main()
-    # OBJ = ImportProductV6(CI)
-    # OBJ.main()
-    # OBJ = ImportListPriceV6(CI)
-    # OBJ.main()
-    # importpartnersv6(CI)
-    # importusers(CI)
-    # OBJ = ImportPaymentTerm(CI)
-    # OBJ.main()
+    OBJ = ImportFiscalYearsPeriods(CI)
+    OBJ.main()
+    OBJ = ImportProductV6(CI)
+    OBJ.main()
+    OBJ = ImportListPriceV6(CI)
+    OBJ.main()
+    importpartnersv6(CI)
+    importusers(CI)
+    OBJ = ImportPaymentTerm(CI)
+    OBJ.main()
