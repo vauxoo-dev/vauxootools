@@ -10,6 +10,30 @@ import re
 import time
 
 
+def get_model(origin, field, model):
+    model_id = origin.search('ir.model',
+                             [('model', '=', model)])
+    model_id = model_id and model_id[0]
+    if model_id:
+
+        field_id = origin.search('ir.model.fields',
+                                 [('name', '=', field),
+                                  ('model_id', '=', model_id)])
+        field_id = field_id and field_id[0]
+        field_dict = field_id and origin.read('ir.model.fields', field_id,
+                                              ['relation']) or {}
+        return field_dict.get('relation')
+    return False
+
+
+def get_id_if_exists(origin, model, field, record_id):
+    fields = [field]
+    data = origin.execute(model, 'read', record_id, fields)
+    if data.get(field):
+        return data.get(field)[0]
+    return False
+
+
 class ImportJournalEntries(object):
     '''
     Import Journal Entries between differents version of Odoo
@@ -62,6 +86,23 @@ class ImportJournalEntries(object):
         for i in move_ids:
             for move in self.migration.origin.execute(model, 'export_data',
                                                       [i], fields)['datas']:
+                for cfield in fields:
+                    index = fields.index(cfield)
+                    if '/id' in cfield and not move[index]:
+                        nfield = cfield.replace('/id', '')
+                        p_id = get_id_if_exists(self.migration.origin,
+                                                model,
+                                                nfield,
+                                                int(move[-1]))
+                        if p_id:
+                            rel = get_model(self.migration.origin,
+                                            nfield,
+                                            model)
+                            new_ref = '__export__.{rel},{ids}'.\
+                                format(rel=rel.replace('.', '_'),
+                                       ids=p_id)
+                            move.pop(index)
+                            move.insert(index, new_ref)
                 if not move[0]:
                     new_id = '__export__.{movel},{ids}'.format(movel=model.replace('.', '_'), ids=move[-1])
                     move.pop(0)
@@ -97,6 +138,23 @@ class ImportJournalEntries(object):
                 if 'Valid' in line:
                     line.insert(line.index('Valid'), 'Balanced')
                     line.remove('Valid')
+                for cfield in fields:
+                    index = fields.index(cfield)
+                    if '/id' in cfield and not line[index]:
+                        nfield = cfield.replace('/id', '')
+                        p_id = get_id_if_exists(self.migration.origin,
+                                                model,
+                                                nfield,
+                                                int(line[-1]))
+                        if p_id:
+                            rel = get_model(self.migration.origin,
+                                            nfield,
+                                            model)
+                            new_ref = '__export__.{rel},{ids}'.\
+                                format(rel=rel.replace('.', '_'),
+                                       ids=p_id)
+                            line.pop(index)
+                            line.insert(index, new_ref)
                 if not line[0]:
                     new_id = '__export__.{linel},{ids}'.format(linel=model.replace('.', '_'), ids=line[-1])
                     line.pop(0)
@@ -179,6 +237,23 @@ class ImportCurrency(object):
             name = time.strftime(currency[1] + ' %H:%M:%S')
             currency.pop(1)
             currency.insert(1, name)
+            for cfield in fields:
+                index = fields.index(cfield)
+                if '/id' in cfield and not currency[index]:
+                    nfield = cfield.replace('/id', '')
+                    p_id = get_id_if_exists(self.migration.origin,
+                                            model,
+                                            nfield,
+                                            int(currency[-1]))
+                    if p_id:
+                        rel = get_model(self.migration.origin,
+                                        nfield,
+                                        model)
+                        new_ref = '__export__.{rel},{ids}'.\
+                            format(rel=rel.replace('.', '_'),
+                                    ids=p_id)
+                        currency.pop(index)
+                        currency.insert(index, new_ref)
             if not currency[0]:
                 new_id = '__export__.{currencyl},{ids}'.format(currencyl=model.replace('.', '_'), ids=currency[-1])
                 currency.pop(0)
@@ -291,6 +366,23 @@ class ImportJournalsV6(object):
                                'Bank and Checks')
                 journal.remove('Bank and Cheques')
 
+            for cfield in fields:
+                index = fields.index(cfield)
+                if '/id' in cfield and not journal[index]:
+                    nfield = cfield.replace('/id', '')
+                    p_id = get_id_if_exists(self.migration.origin,
+                                            model,
+                                            nfield,
+                                            int(journal[-1]))
+                    if p_id:
+                        rel = get_model(self.migration.origin,
+                                        nfield,
+                                        model)
+                        new_ref = '__export__.{rel},{ids}'.\
+                            format(rel=rel.replace('.', '_'),
+                                    ids=p_id)
+                        journal.pop(index)
+                        journal.insert(index, new_ref)
             if not journal[0]:
                 new_id = '__export__.{journall},{ids}'.format(journall=model.replace('.', '_'), ids=journal[-1])
                 journal.pop(0)
@@ -396,6 +488,23 @@ class ImportProductV6(object):
                                                      'export_data',
                                                      product_ids,
                                                      fields)['datas']:
+            for cfield in fields:
+                index = fields.index(cfield)
+                if '/id' in cfield and not product[index]:
+                    nfield = cfield.replace('/id', '')
+                    p_id = get_id_if_exists(self.migration.origin,
+                                            model,
+                                            nfield,
+                                            int(product[-1]))
+                    if p_id:
+                        rel = get_model(self.migration.origin,
+                                        nfield,
+                                        model)
+                        new_ref = '__export__.{rel},{ids}'.\
+                            format(rel=rel.replace('.', '_'),
+                                    ids=p_id)
+                        product.pop(index)
+                        product.insert(index, new_ref)
             if not product[0]:
                 new_id = '__export__.{productl},{ids}'.format(productl=model.replace('.', '_'), ids=product[-1])
                 product.pop(0)
@@ -481,6 +590,23 @@ class ImportListPriceV6(object):
         for pricelist in self.migration.origin.execute(model, 'export_data',
                                                        pricelist_ids, fields
                                                       )['datas']:
+            for cfield in fields:
+                index = fields.index(cfield)
+                if '/id' in cfield and not pricelist[index]:
+                    nfield = cfield.replace('/id', '')
+                    p_id = get_id_if_exists(self.migration.origin,
+                                            model,
+                                            nfield,
+                                            int(pricelist[-1]))
+                    if p_id:
+                        rel = get_model(self.migration.origin,
+                                        nfield,
+                                        model)
+                        new_ref = '__export__.{rel},{ids}'.\
+                            format(rel=rel.replace('.', '_'),
+                                    ids=p_id)
+                        pricelist.pop(index)
+                        pricelist.insert(index, new_ref)
             if not pricelist[0]:
                 new_id = '__export__.{pricelistl},{ids}'.format(pricelistl=model.replace('.', '_'), ids=pricelist[-1])
                 pricelist.pop(0)
@@ -510,6 +636,23 @@ class ImportListPriceV6(object):
         for pricelist in self.migration.origin.execute(model, 'export_data',
                                                        pricelist_ids, fields
                                                       )['datas']:
+            for cfield in fields:
+                index = fields.index(cfield)
+                if '/id' in cfield and not pricelist[index]:
+                    nfield = cfield.replace('/id', '')
+                    p_id = get_id_if_exists(self.migration.origin,
+                                            model,
+                                            nfield,
+                                            int(pricelist[-1]))
+                    if p_id:
+                        rel = get_model(self.migration.origin,
+                                        nfield,
+                                        model)
+                        new_ref = '__export__.{rel},{ids}'.\
+                            format(rel=rel.replace('.', '_'),
+                                    ids=p_id)
+                        pricelist.pop(index)
+                        pricelist.insert(index, new_ref)
             if not pricelist[0]:
                 new_id = '__export__.{pricelistl},{ids}'.format(pricelistl=model.replace('.', '_'), ids=pricelist[-1])
                 pricelist.pop(0)
@@ -608,6 +751,23 @@ class ImportFiscalYearsPeriods(object):
         for period in self.migration.origin.execute(model, 'export_data',
                                                     period_ids,
                                                     fields)['datas']:
+            for cfield in fields:
+                index = fields.index(cfield)
+                if '/id' in cfield and not period[index]:
+                    nfield = cfield.replace('/id', '')
+                    p_id = get_id_if_exists(self.migration.origin,
+                                            model,
+                                            nfield,
+                                            int(period[-1]))
+                    if p_id:
+                        rel = get_model(self.migration.origin,
+                                        nfield,
+                                        model)
+                        new_ref = '__export__.{rel},{ids}'.\
+                            format(rel=rel.replace('.', '_'),
+                                    ids=p_id)
+                        period.pop(index)
+                        period.insert(index, new_ref)
             if not period[0]:
                 new_id = '__export__.{periodl},{ids}'.format(periodl=model.replace('.', '_'), ids=period[-1])
                 period.pop(0)
@@ -682,6 +842,23 @@ class ImportPaymentTerm(object):
         for account in self.migration.origin.execute(model, 'export_data',
                                                      account_ids,
                                                      fields)['datas']:
+            for cfield in fields:
+                index = fields.index(cfield)
+                if '/id' in cfield and not account[index]:
+                    nfield = cfield.replace('/id', '')
+                    p_id = get_id_if_exists(self.migration.origin,
+                                            model,
+                                            nfield,
+                                            int(account[-1]))
+                    if p_id:
+                        rel = get_model(self.migration.origin,
+                                        nfield,
+                                        model)
+                        new_ref = '__export__.{rel},{ids}'.\
+                            format(rel=rel.replace('.', '_'),
+                                    ids=p_id)
+                        account.pop(index)
+                        account.insert(index, new_ref)
             if not account[0]:
                 new_id = '__export__.{accountl},{ids}'.format(accountl=model.replace('.', '_'), ids=account[-1])
                 account.pop(0)
@@ -754,7 +931,7 @@ def importpartnersv6(migration):
                 'property_product_pricelist_purchase/id', 'customer',
                 'supplier', '.id']
     fields_a = ['city', 'type', 'street', 'street2', 'fax',
-                'zip', 'country_id']
+                'zip', 'country_id', '.id']
     fields_c = ['id', 'name', 'fax', 'mobile', 'street', 'street2',
                 'country_id', 'type', 'partner_id/id']
     fields_c8 = ['id', 'name', 'fax', 'mobile', 'street', 'street2',
@@ -786,7 +963,23 @@ def importpartnersv6(migration):
                                                          fields_a)['datas'][0]
                 fields = fields_p+fields_a
 
-
+        for cfield in fields or fields_p:
+            index = fields and fields.index(cfield) or fields_p.index(cfield)
+            if '/id' in cfield and not partner_list[index]:
+                nfield = cfield.replace('/id', '')
+                p_id = get_id_if_exists(migration.origin,
+                                        model,
+                                        nfield,
+                                        int(partner_list[-1]))
+                if p_id:
+                    rel = get_model(migration.origin,
+                                    nfield,
+                                    model)
+                    new_ref = '__export__.{rel},{ids}'.\
+                        format(rel=rel.replace('.', '_'),
+                                ids=p_id)
+                    partner_list.pop(index)
+                    partner_list.insert(index, new_ref)
         if not partner_list[0]:
             new_id = '__export__.{partner_listl},{ids}'.format(partner_listl=model.replace('.', '_'), ids=partner_list[-1])
             partner_list.pop(0)
@@ -884,11 +1077,32 @@ class ImportAccountsV6(object):
                                                          account_ids,
                                                          fields)['datas']:
 
+                for cfield in fields:
+                    index = fields.index(cfield)
+                    if '/id' in cfield and not account[index]:
+                        nfield = cfield.replace('/id', '')
+                        p_id = get_id_if_exists(self.migration.origin,
+                                                model,
+                                                nfield,
+                                                int(account[-1]))
+                        if p_id:
+                            rel = get_model(self.migration.origin,
+                                            nfield,
+                                            model)
+                            new_ref = '__export__.{rel},{ids}'.\
+                                format(rel=rel.replace('.', '_'),
+                                       ids=p_id)
+                            account.pop(index)
+                            account.insert(index, new_ref)
+
                 if not account[0]:
-                    new_id = '__export__.{accountl},{ids}'.format(accountl=model.replace('.', '_'), ids=account[-1])
+                    new_id = '__export__.{accountl},{ids}'.\
+                        format(accountl=model.replace('.', '_'),
+                               ids=account[-1])
                     account.pop(0)
                     account.insert(0, new_id)
                 account.pop(-1)
+
                 result = self.migration.dest.execute(model, 'import_data',
                                                      fields, [account])
                 if account[0] in no_create.keys():
