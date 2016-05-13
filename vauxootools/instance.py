@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 import oerplib
+import odoorpc
+
 
 class Instance(object):
     '''
@@ -82,14 +84,31 @@ class Instance(object):
         :raise: :class:`oerplib.error.RPCError`
         :return: a oerplib login object or False if any parameter is wrong
         '''
-
-        con = oerplib.OERP(
-            server=kwargs.get('host', False) or self.hostname,
-            database=kwargs.get('database', False) or self.dbname,
-            port=kwargs.get('port', False) or self.port,
-            timeout=9999999)
+        if kwargs.get('database', False) or self.dbname == 'rico2':
+            con = oerplib.OERP(
+                server=kwargs.get('host', False) or self.hostname,
+                database=kwargs.get('database', False) or self.dbname,
+                port=kwargs.get('port', False) or self.port,
+                timeout=9999999)
+            try:
+                con.login(kwargs.get('user') or self.username, kwargs.get('password') or self.password)
+                self.logger.info("Logged with user %s" % (kwargs.get('user') or self.username))
+            except Exception, error:
+                con = False
+                self.logger.error("We can't do login in the iserver: "
+                                  "http://%s:%s with user %s" % \
+                                          (kwargs.get('host') or self.hostname, kwargs.get('port') or self.port,
+                                          kwargs.get('user') or self.username))
+                self.logger.error(error)
+            return con
+        con = odoorpc.ODOO(
+            kwargs.get('host', False) or self.hostname,
+            port=kwargs.get('port', False) or self.port)
         try:
-            con.login(kwargs.get('user') or self.username, kwargs.get('password') or self.password)
+            con.login(
+                kwargs.get('database', False) or self.dbname,
+                kwargs.get('user') or self.username,
+                kwargs.get('password') or self.password)
             self.logger.info("Logged with user %s" % (kwargs.get('user') or self.username))
         except Exception, error:
             con = False

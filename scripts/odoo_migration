@@ -599,7 +599,6 @@ class ImportPaymentTerm(object):
                                                      fields)['datas']:
             result = self.migration.dest.execute(model, 'import_data', fields,
                                                  [account])
-            print result
             if result[2]:
                 self.migration.loger.error('Error creating the Term Line %s '
                                            'because %s' % (account[1],
@@ -648,10 +647,27 @@ def importpartnersv6(migration):
     '''
     Import Partners from verion 6 of odoo
     '''
+    def before_import(fields, data):
+        '''
+        Change values that are diferents by v6.1 and v9
+        '''
+        p_type = False
+        try:
+            p_type = fields.index('type')
+            value = data[p_type]
+            if value in ('Default', 'Other'):
+                data[p_type] = 'Other address'
+            elif value == 'Invoice':
+                data[p_type] = 'Invoice address'
+            elif value == 'Delivery':
+                data[p_type] = 'Shipping address'
+        except ValueError:
+            p_type = False
+        return data
 
     model = 'res.partner'
     model2 = 'res.partner.address'
-    fields_p = ['id', 'name', 'credit', 'vat',
+    _fields_p = ['id', 'name', 'credit', 'vat',
                 'credit_limit', 'debit', 'debit_limit', 'email', 'mobile',
                 'phone', 'property_account_payable/id',
                 'property_account_receivable/id',
@@ -659,12 +675,17 @@ def importpartnersv6(migration):
                 'property_product_pricelist/id',
                 'property_product_pricelist_purchase/id', 'customer',
                 'supplier']
+    fields_p = ['id', 'name', 'credit', 'vat',
+                'credit_limit', 'debit', 'debit_limit', 'email', 'mobile',
+                'phone',
+                'customer',
+                'supplier']
     fields_a = ['city', 'type', 'street', 'street2', 'fax',
                 'zip', 'country_id']
     fields_c = ['id', 'name', 'fax', 'mobile', 'street', 'street2',
                 'country_id', 'type', 'partner_id/id']
     fields_c8 = ['id', 'name', 'fax', 'mobile', 'street', 'street2',
-                 'country_id', 'type', 'parent_id/id']
+                'country_id', 'type', 'parent_id/id']
 
     for partner in migration.origin.search(model, []):
 
@@ -692,9 +713,8 @@ def importpartnersv6(migration):
                                                          fields_a)['datas'][0]
                 fields = fields_p+fields_a
 
-
         result = migration.dest.execute(model, 'import_data', fields or \
-                                        fields_p, [partner_list])
+                                        fields_p, [before_import(fields or fields_p, partner_list)])
         if result[2]:
             migration.loger.error('Error creating the type %s '
                                   'because %s' % (partner_list[1], result[2]))
@@ -712,7 +732,7 @@ def importpartnersv6(migration):
                 con.pop(1)
                 con.insert(1, partner_list[1])
             result = migration.dest.execute(model, 'import_data', fields_c8,
-                                            [con])
+                                            [before_import(fields_c8, con)])
             if result[2]:
                 migration.loger.error('Error creating the Contac %s '
                                       'because %s' % (con[1], result[2]))
@@ -720,6 +740,8 @@ def importpartnersv6(migration):
                 migration.loger.info('Created the Contact  %s '
                                      '' % (con[1]))
     return True
+
+                
 
 class ImportAccountsV6(object):
     '''
@@ -874,5 +896,5 @@ if __name__ == '__main__':
   #  OBJ.main()
     importpartnersv6(CI)
     #importusers(CI)
-    OBJ = ImportPaymentTerm(CI)
+   # OBJ = ImportPaymentTerm(CI)
     OBJ.main()
