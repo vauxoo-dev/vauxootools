@@ -677,57 +677,53 @@ def importpartnersv6(migration):
                 'supplier']
     fields_p = ['id', 'name', 'credit', 'vat',
                 'credit_limit', 'debit', 'debit_limit', 'email', 'mobile',
-                'phone',
-                'customer',
-                'supplier']
+                'phone', 'customer', 'supplier']
     fields_a = ['city', 'type', 'street', 'street2', 'fax',
                 'zip', 'country_id']
     fields_c = ['id', 'name', 'fax', 'mobile', 'street', 'street2',
-                'country_id', 'type', 'partner_id/id']
+                'country_id', 'type', 'partner_id/id', 'zip', 'city']
     fields_c8 = ['id', 'name', 'fax', 'mobile', 'street', 'street2',
-                'country_id', 'type', 'parent_id/id']
+                'country_id', 'type', 'parent_id/id', 'zip', 'city']
 
     for partner in migration.origin.search(model, []):
 
-        partner_list = migration.origin.execute(model, 'export_data',
-                                                [partner],
-                                                fields_p)['datas']
-        contact = migration.origin.search(model2,
-                                          [('partner_id', '=', partner),
-                                           ('type', '=', 'invoice')],
-                                          limit=1)
+        partner_list = migration.origin.execute(
+            model, 'export_data', [partner], fields_p)['datas']
+        contact = migration.origin.search(
+            model2, [
+                ('partner_id', '=', partner),
+                ('type', '=', 'invoice')], limit=1)
         partner_list = partner_list[0]
         fields = False
         if contact:
-            partner_list += migration.origin.execute(model2, 'export_data',
-                                                     contact,
-                                                     fields_a)['datas'][0]
+            partner_list += migration.origin.execute(
+                model2, 'export_data', contact, fields_a)['datas'][0]
             fields = fields_p+fields_a
         else:
-            contact = migration.origin.search(model2,
-                                              [('partner_id', '=', partner)],
-                                              limit=1)
+            contact = migration.origin.search(
+                model2, [('partner_id', '=', partner)], limit=1)
             if contact:
-                partner_list += migration.origin.execute(model2, 'export_data',
-                                                         contact,
-                                                         fields_a)['datas'][0]
-                fields = fields_p+fields_a
-
-        result = migration.dest.execute(model, 'import_data', fields or \
-                                        fields_p, [before_import(fields or fields_p, partner_list)])
+                partner_list += migration.origin.execute(
+                    model2, 'export_data', contact, fields_a)['datas'][0]
+                fields = fields_p + fields_a
+        fields_company = list(fields or fields_p)
+        fields_company.append('company_type')
+        partner_list.append('company')
+        result = migration.dest.execute(
+            model, 'import_data', fields_company,
+            [before_import(fields_company, partner_list)])
         if result[2]:
             migration.loger.error('Error creating the type %s '
                                   'because %s' % (partner_list[1], result[2]))
         else:
             migration.loger.info('Created the partner  %s '
                                  '' % (partner_list[1]))
-        contact = contact and migration.origin. search(model2, [('partner_id',
-                                                                 '=', partner),
-                                                                ('id', '!=',
-                                                                 contact[0])])
-        for con in contact and migration.origin.execute(model2, 'export_data',
-                                                        contact,
-                                                        fields_c)['datas']:
+        contact = contact and migration.origin. search(
+            model2, [
+                ('partner_id', '=', partner),
+                ('id', '!=', contact[0])])
+        for con in contact and migration.origin.execute(
+                model2, 'export_data', contact, fields_c)['datas']:
             if con[1] == False:
                 con.pop(1)
                 con.insert(1, partner_list[1])
@@ -737,8 +733,7 @@ def importpartnersv6(migration):
                 migration.loger.error('Error creating the Contac %s '
                                       'because %s' % (con[1], result[2]))
             else:
-                migration.loger.info('Created the Contact  %s '
-                                     '' % (con[1]))
+                migration.loger.info('Created the Contact  %s ' % (con[1]))
     return True
 
                 
