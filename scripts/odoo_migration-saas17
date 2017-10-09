@@ -333,14 +333,14 @@ class ImportProductV6(object):
         legacy = self.migration.origin
         destiny = self.migration.dest
         model = 'product.category'
-        fields_o = ['id','.id', 'name', 'type', 'parent_id/id', 'parent_id.id',
+        fields_o = ['id','.id', 'name', 'parent_id/id', 'parent_id.id',
                   'property_account_expense_categ/id', 'property_account_expense_categ.id',
                   'property_account_income_categ/id', 'property_account_income_categ.id',
                   'property_stock_account_input_categ/id', 'property_stock_account_input_categ.id',
                   'property_stock_account_output_categ/id', 'property_stock_account_output_categ.id',
                   'property_stock_variation/id', 'property_stock_variation.id',
                   'property_stock_journal/id', 'property_stock_journal.id']
-        fields_d = ['id', 'name', 'type', 'parent_id/id',
+        fields_d = ['id', 'name', 'parent_id/id',
                   'property_account_expense_categ_id/id',
                   'property_account_income_categ_id/id',
                   'property_stock_account_input_categ_id/id',
@@ -356,22 +356,22 @@ class ImportProductV6(object):
         for data in datas:
             vals  = [] in data and data[:data.index([])] or data
             vals[0][0] = vals[0][0] or '__export__.product_category_' + vals[0][1]
-            vals[0][6] = vals[0][6] or ('__export__.account_account_' + vals[0][7] if vals[0][7] else '')
-            vals[0][8] = vals[0][8] or ('__export__.account_account_' + vals[0][9] if vals[0][9] else '')
-            vals[0][10] = vals[0][10] or ('__export__.account_account_' + vals[0][11] if vals[0][11] else '')
-            vals[0][12] = vals[0][12] or ('__export__.account_account_' + vals[0][13] if vals[0][13] else '')
-            vals[0][14] = vals[0][14] or ('__export__.account_account_' + vals[0][15] if vals[0][15] else '')
-            vals[0][16] = vals[0][16] or ('__export__.account_journal_' + vals[0][17] if vals[0][17] else '')
-            if vals[0][16] == 'stock.stock_journal':
-                vals[0][16] = '__export__.account_journal_1'
+            vals[0][5] = vals[0][5] or ('__export__.account_account_' + vals[0][6] if vals[0][6] else '')
+            vals[0][7] = vals[0][7] or ('__export__.account_account_' + vals[0][8] if vals[0][8] else '')
+            vals[0][9] = vals[0][9] or ('__export__.account_account_' + vals[0][10] if vals[0][10] else '')
+            vals[0][11] = vals[0][11] or ('__export__.account_account_' + vals[0][12] if vals[0][12] else '')
+            vals[0][13] = vals[0][13] or ('__export__.account_account_' + vals[0][14] if vals[0][14] else '')
+            vals[0][15] = vals[0][15] or ('__export__.account_journal_' + vals[0][16] if vals[0][16] else '')
+            if vals[0][15] == 'stock.stock_journal':
+                vals[0][15] = '__export__.account_journal_1'
             if vals[0][0] == 'product.cat0':
                 vals[0][0] = '__export__.product_category_1'
-            del vals[0][17]
-            del vals[0][15]
-            del vals[0][13]
-            del vals[0][11]
-            del vals[0][9]
-            del vals[0][7]
+            del vals[0][16]
+            del vals[0][14]
+            del vals[0][12]
+            del vals[0][10]
+            del vals[0][8]
+            del vals[0][6]
             del vals[0][1]
             #self.migration.loger.info( 'Categories %s ' % (vals[0][3]))
             for val in vals:
